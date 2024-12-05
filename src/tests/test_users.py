@@ -1,7 +1,29 @@
 import pytest
 from .utils import create_user, login_user
-from app.core.jwt import create_access_token
+from datetime import datetime, timedelta, UTC
 from datetime import timedelta
+from jose import JWTError, jwt
+from typing import Any, Union
+
+
+DATABASE_URL: str
+SECRET_KEY: str = "GRHTYJKLUJSIEMDJSERUJAWEWRAW"
+ALGORITHM: str = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+
+def create_access_token(
+    data: dict, expires_delta: Union[timedelta, None] = None
+) -> str:
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(UTC) + expires_delta
+    else:
+        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 def test_register_user(client, unique_username, unique_email):
     response = client.post("/users/register", json={

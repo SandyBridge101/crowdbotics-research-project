@@ -1,6 +1,12 @@
 from operator import ge
 import pytest
-from .utils import create_user, generate_random_plan_name, login_user, create_plan, create_magazine
+from .utils import (
+    create_user,
+    generate_random_plan_name,
+    login_user,
+    create_plan,
+    create_magazine,
+)
 
 
 def test_create_subscription(client, unique_username, unique_email):
@@ -20,7 +26,8 @@ def test_create_subscription(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 100 * (1 - plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -39,7 +46,9 @@ def test_get_subscriptions(client, unique_username, unique_email):
     headers = {"Authorization": f"Bearer {token}"}
 
     name_suffix = "get_sub"
-    plan = create_plan(client, headers, title=generate_random_plan_name(), discount=0.25)
+    plan = create_plan(
+        client, headers, title=generate_random_plan_name(), discount=0.25
+    )
     magazine = create_magazine(client, headers, name_suffix, base_price=100)
 
     client.post(
@@ -48,7 +57,8 @@ def test_get_subscriptions(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 90,
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -79,7 +89,8 @@ def test_update_subscription(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 90,
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -103,7 +114,8 @@ def test_update_subscription(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": new_plan["id"],
-            "renewal_date": "2025-01-31",
+            "price": 100 * (1 - new_plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -131,7 +143,8 @@ def test_delete_subscription(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 90,
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -183,7 +196,8 @@ def test_price_greater_than_zero(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": bad_plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 0,
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -251,7 +265,8 @@ def test_price_calculation(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": silver_plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 100 * (1 - silver_plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -266,7 +281,8 @@ def test_price_calculation(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": gold_plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 100 * (1 - gold_plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -281,7 +297,8 @@ def test_price_calculation(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": platinum_plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 100 * (1 - platinum_plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -296,7 +313,8 @@ def test_price_calculation(client, unique_username, unique_email):
             "user_id": user_id,
             "magazine_id": magazine["id"],
             "plan_id": diamond_plan["id"],
-            "renewal_date": "2024-12-31",
+            "price": 100 * (1 - diamond_plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
         },
         headers=headers,
     )
@@ -308,7 +326,9 @@ def test_price_calculation(client, unique_username, unique_email):
 
 def test_unique_subscription_constraint(client, unique_username, unique_email):
     # Create a user and login
-    username, _, user_id = create_user(client, unique_username, unique_email, "adminpassword").values()
+    username, _, user_id = create_user(
+        client, unique_username, unique_email, "adminpassword"
+    ).values()
     token = login_user(client, username, "adminpassword")
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -318,22 +338,38 @@ def test_unique_subscription_constraint(client, unique_username, unique_email):
     magazine = create_magazine(client, headers, name_suffix)
 
     # Create the first subscription
-    response = client.post("/subscriptions/", json={
-        "user_id": user_id,  # Assuming the created user ID is 1
-        "magazine_id": magazine["id"],
-        "plan_id": plan["id"],
-        "renewal_date": "2024-12-31"
-    }, headers=headers)
-    assert response.status_code == 200, f"Response status code: {response.status_code}, Response body: {response.text}"
-    
+    response = client.post(
+        "/subscriptions/",
+        json={
+            "user_id": user_id,  # Assuming the created user ID is 1
+            "magazine_id": magazine["id"],
+            "plan_id": plan["id"],
+            "price": 100 * (1 - plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
+        },
+        headers=headers,
+    )
+    assert (
+        response.status_code == 200
+    ), f"Response status code: {response.status_code}, Response body: {response.text}"
+
     # Attempt to create a duplicate subscription
-    response = client.post("/subscriptions/", json={
-        "user_id": user_id,  # Assuming the created user ID is 1
-        "magazine_id": magazine["id"],
-        "plan_id": plan["id"],
-        "renewal_date": "2024-12-31"
-    }, headers=headers)
-    
+    response = client.post(
+        "/subscriptions/",
+        json={
+            "user_id": user_id,  # Assuming the created user ID is 1
+            "magazine_id": magazine["id"],
+            "plan_id": plan["id"],
+            "price": 100 * (1 - plan["discount"]),
+            "next_renewal_date": "2024-11-27T01:22:01.363Z",
+        },
+        headers=headers,
+    )
+
     # Assert that the second subscription creation attempt fails
-    assert response.status_code == 422, f"Response status code: {response.status_code}, Response body: {response.text}"
-    assert "already exists" in response.text, "Expected error message for duplicate subscription not found"
+    assert (
+        response.status_code == 422
+    ), f"Response status code: {response.status_code}, Response body: {response.text}"
+    assert (
+        "already exists" in response.text
+    ), "Expected error message for duplicate subscription not found"

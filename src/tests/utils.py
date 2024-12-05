@@ -1,6 +1,6 @@
 import random
-from app.schemas.user import UserCreate
-from app.schemas.magazine import MagazineCreate
+from src.schemas import UserCreate
+from src.schemas import MagazineCreate
 
 
 def create_user(client, base_username: str, base_email: str, password: str) -> dict:
@@ -49,6 +49,7 @@ def create_plan(
 
 
 def create_magazine(client, headers, name_suffix, base_price=100):
+
     magazine_data = MagazineCreate(
         name=f"Magazine {name_suffix}",
         description=f"Description {name_suffix}",
